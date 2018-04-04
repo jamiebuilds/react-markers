@@ -1,6 +1,6 @@
 {
   "name": "react-markers",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Add markers to your React components for easy testing with actual DOM elements",
   "main": "index.js",
   "repository": "thejameskyle/react-markers",
