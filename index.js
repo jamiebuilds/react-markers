@@ -1,77 +1,50 @@
 // @flow
 'use strict';
-
-const React = require('react');
+var ATTR = 'data-react-marker';
+var MATCH_NONE = '#x:before'; // fastest way to match no elements
+var UNIQUE_ID = 0;
 
 /*::
-type ClassComponent<Props> = Class<React.Component<any, Props, any>>;
-type FunctionComponent<Props> = (props: Props) => React$Element<any>;
-
-type ComponentOrString<Props> =
-  | ClassComponent<Props>
-  | FunctionComponent<Props>
-  | string;
-
-type Marker<Props> = FunctionComponent<Props>;
+type Marker = { [typeof ATTR]: number };
 */
 
-let ID = Symbol.for('react-marker-provide-id');
-let KEY /*: any */ = Symbol('react-marker-id-key');
-let zeroWidthSpace = '\u200b';
-let uniqueId = 0;
+function marker() /*: Marker | null */ {
+  if (process.env.NODE_ENV === 'test') return { [ATTR]: UNIQUE_ID++ };
+  return null;
+}
 
-function marker/*:: <Props: {}> */(
-  Component /*: ComponentOrString<Props> */,
-  opts /*: Object */ = {}
-) /*: Marker<Props> */ {
-  let id = opts[ID] || uniqueId++;
-  let fn;
+function notInTest(element /*: HTMLElement */, marker /*: Marker | null */) {
+  throw new Error('Can only use marker.find/findAll inside a test environment (NODE_ENV=test)');
+}
 
-  if (process.env.NODE_ENV === 'test') {
-    fn = function(props) {
-      return React.createElement(Component, Object.assign({}, props, {
-        'data-marker': zeroWidthSpace + id,
-      }));
-    };
-  } else {
-    fn = function(props) {
-      return React.createElement(Component, props);
-    };
+var find = notInTest;
+var findAll = notInTest;
+
+if (process.env.NODE_ENV === 'test') {
+  function assert(element /*: HTMLElement */, marker /*: Marker | null */) {
+    if (
+      !(element instanceof HTMLElement) ||
+      !(marker === null || typeof marker === 'object' && typeof marker[ATTR] === 'number')
+    ) {
+      throw new Error('Must pass a element and marker to "find/findAll(element, marker)"');
+    }
   }
 
-  fn[KEY] = id;
-
-  return fn;
-}
-
-function assertElement(method, element) {
-  if (!(element instanceof HTMLElement)) {
-    throw new Error('Must pass a DOM element to "' + method + '(element, ...)"');
+  function toSelector(marker /*: Marker | null */) {
+    return marker ? '[' + ATTR + '="' + marker[ATTR] + '"]' : MATCH_NONE;
   }
+
+  find = function(element /*: HTMLElement */, marker /*: Marker | null */) /*: HTMLElement | null */ {
+    assert(element, marker);
+    return element.querySelector(toSelector(marker));
+  };
+
+  findAll = function(element /*: HTMLElement */, marker /*: Marker | null */) /*: NodeList<HTMLElement> */ {
+    assert(element, marker);
+    return element.querySelectorAll(toSelector(marker));
+  };
 }
 
-function assertMarker(method, marker) {
-  if (!marker || typeof marker[KEY] === 'undefined') {
-    throw new Error('Must pass a marker to "' + method + '(..., marker)"');
-  }
-}
-
-function toSelector(marker) {
-  return '[data-marker="' + zeroWidthSpace + marker[KEY] + '"]';
-}
-
-function find(element /*: HTMLElement */, marker /*: Marker<Object> */) /*: HTMLElement | null */ {
-  assertElement('find', element);
-  assertMarker('find', marker);
-  return element.querySelector(toSelector(marker));
-}
-
-function findAll(element /*: HTMLElement */, marker /*: Marker<Object> */) /*: NodeList<HTMLElement> */ {
-  assertElement('findAll', element);
-  assertMarker('findAll', marker);
-  return element.querySelectorAll(toSelector(marker));
-}
-
-exports.marker = marker;
-exports.find = find;
-exports.findAll = findAll;
+module.exports = marker;
+module.exports.find = find;
+module.exports.findAll = findAll;
