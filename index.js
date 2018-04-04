@@ -13,7 +13,7 @@ function marker() /*: Marker | null */ {
   return null;
 }
 
-function notInTest(element /*: HTMLElement */, marker /*: Marker | null */) {
+function notInTest(/*:: element: HTMLElement, marker: Marker | null */) {
   throw new Error('Can only use marker.find/findAll inside a test environment (NODE_ENV=test)');
 }
 
